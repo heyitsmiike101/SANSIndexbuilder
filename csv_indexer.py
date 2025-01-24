@@ -1,5 +1,6 @@
 import os
 import csv
+import html
 
 
 def import_csv(filename: str) -> list[list]:
@@ -72,17 +73,56 @@ def find_csv_files(directory: str) -> str:
                 print("Invalid input. Please enter a number.")
 
 
+def define_headers(data: list[list]):
+
+    headers = {"book": -1, "page": -1, "description": -1, "title": -1}
+
+    row_index = 0
+    for row in data[0]:
+        if row.lower() == "book":
+            headers["book"] = row_index
+        if row.lower() == "page":
+            headers["page"] = row_index
+        if row.lower() == "description":
+            headers["description"] = row_index
+        if "title" in row.lower() or "tool" in row.lower() or "keyword" in row.lower():
+            headers["title"] = row_index
+        row_index += 1
+    return headers
+
+
+def sort_list_of_lists(
+    data: list[list], column_index: int, reverse: bool = False
+) -> list[list]:
+    """
+    Sorts a list of lists based on a specified column index.
+    """
+    if column_index < 0 or column_index >= len(data[0]):
+        raise IndexError("Column index is out of range.")
+
+    return sorted(data, key=lambda x: x[column_index], reverse=reverse)
+
+
 def main():
     filename = find_csv_files(os.getcwd())
     csv_data = import_csv(filename)
+    headers = define_headers(csv_data)
+
+    userin = input("Do you want to sort by the title?([y]/n])").strip().lower()
+    if userin in ("", "y", "yes"):
+        csv_data = sort_list_of_lists(csv_data, column_index=headers["title"])
 
     body_data = ""
     line_count = 0
     for i in csv_data[1:]:
         # Title,Description,Page,Book
-        bookpage = "[b{b}/p{p}]".format(b=str(i[3]), p=str(i[2]))
+        bookpage = "[b{b}/p{p}]".format(
+            b=str(i[headers["book"]]), p=str(i[headers["page"]])
+        )
         row_str = '<span style="color: blue; font-weight: bold;"> {title}</span><span style="font-style: italic;"> {bookpage}</span> {description}<br>\n'.format(
-            title=i[0], bookpage=bookpage, description=i[1]
+            title=html.escape(i[headers["title"]]),
+            bookpage=bookpage,
+            description=html.escape(i[headers["description"]]),
         )
         body_data += row_str
         line_count += 1
